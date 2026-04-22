@@ -227,7 +227,7 @@ block_size - 2 (Network address and Broadcast address) = usable addresses
 | 254 | 1 | 2 | 2 * | 128 |
 | 255 | 0 | 1 | 1 * | — |
 
-> \* `/31` and `/32` are special cases — they do **not** follow the network address and broadcast rules. See below.
+> \* `/31` and `/32` are special cases — they do **not** follow the network address and broadcast rules. These are covered in detail once CIDR notation is introduced.
 
 ---
 
@@ -245,59 +245,6 @@ With `255.255.255.240` (block size 16), your subnets in the last octet are:
 **Machine A** (`192.168.1.13 /28`) and **Machine B** (`192.168.1.1 /28`) → same network (`.0–.15`) ✅
 
 **Machine C** (`192.168.1.17 /28`) → different network (`.16–.31`) ❌
-
----
-
-#### Finding the network range — Bitwise AND
-
-To find the exact range of a network given an IP and a mask, you apply a **bitwise AND**: go bit by bit, and keep a `1` only where **both** the IP and the mask have a `1`. Everything else becomes `0`. The result is the **network address** — the start of the range.
-
-**Example — `21.23.143.3/14`:**
-
-First, convert the mask. `/14` means 14 ones: `11111111.11111100.00000000.00000000` → `255.252.0.0`
-
-Then AND with the IP:
-
-```
-IP:   00010101.00010111.10001111.00000011   (21.23.143.3)
-Mask: 11111111.11111100.00000000.00000000   (255.252.0.0)
-AND:  00010101.00010100.00000000.00000000   (21.20.0.0)
-```
-
-So the **network address** (range start) is `21.20.0.0`.
-
-For the **range end**, use the block size trick on the relevant octet:
-```
-256 - 252 = 4  (block size on the second octet)
-21.20.0.0 →  next network starts at 21.24.0.0
-```
-So the broadcast (range end) is `21.23.255.255`.
-
-```
-Range:     21.20.0.0  –  21.23.255.255
-Usable:    21.20.0.1  –  21.23.255.254
-```
-
-**The rule in short:**
-```
-IP AND Mask = Network address (start of range)
-Network address + block_size - 1 = Broadcast (end of range)
-```
-
----
-
-#### Edge cases: /31 and /32
-
-**`/31` — mask `255.255.255.254` — 2 addresses:**
-Used for point-to-point links between exactly two devices. No network address or broadcast needed.
-```
-Machine A: 192.168.1.254
-Machine B: 192.168.1.255
-```
-Both addresses go directly to devices. *(You won't see this in Net Practice, but good to know.)*
-
-**`/32` — mask `255.255.255.255` — 1 address:**
-Every device is its own network. Used for specific host routes. *(You also won't see this in Net Practice, but also good to know.)*
 
 ---
 
@@ -357,9 +304,62 @@ So `192.168.1.13` with mask `255.255.255.240` can be written as `192.168.1.13/28
 
 ---
 
+#### Finding the network range — Bitwise AND
+
+To find the exact range of a network given an IP and a mask, you apply a **bitwise AND**: go bit by bit, and keep a `1` only where **both** the IP and the mask have a `1`. Everything else becomes `0`. The result is the **network address** — the start of the range.
+
+**Example — `21.23.143.3/14`:**
+
+First, convert the mask. `/14` means 14 ones: `11111111.11111100.00000000.00000000` → `255.252.0.0`
+
+Then AND with the IP:
+
+```
+IP:   00010101.00010111.10001111.00000011   (21.23.143.3)
+Mask: 11111111.11111100.00000000.00000000   (255.252.0.0)
+AND:  00010101.00010100.00000000.00000000   (21.20.0.0)
+```
+
+So the **network address** (range start) is `21.20.0.0`.
+
+For the **range end**, use the block size trick on the relevant octet:
+```
+256 - 252 = 4  (block size on the second octet)
+21.20.0.0 →  next network starts at 21.24.0.0
+```
+So the broadcast (range end) is `21.23.255.255`.
+
+```
+Range:     21.20.0.0  –  21.23.255.255
+Usable:    21.20.0.1  –  21.23.255.254
+```
+
+**The rule in short:**
+```
+IP AND Mask = Network address (start of range)
+Network address + block_size - 1 = Broadcast (end of range)
+```
+
+---
+
+#### Edge cases: /31 and /32
+
+**`/31` — mask `255.255.255.254` — 2 addresses:**
+Used for point-to-point links between exactly two devices. No network address or broadcast needed.
+```
+Machine A: 192.168.1.254
+Machine B: 192.168.1.255
+```
+Both addresses go directly to devices. *(You won't see this in Net Practice, but good to know.)*
+
+**`/32` — mask `255.255.255.255` — 1 address:**
+Every device is its own network. Used for specific host routes. *(You also won't see this in Net Practice, but also good to know.)*
+
+---
+
 ### 6. Private & Reserved IP Ranges
 
-Not all IP addresses are equal. Some ranges are **reserved** and cannot be used on the public internet. A private address cannot connect directly to the internet — a device needs a **public IP** to do that.
+Now that you can read any address in CIDR notation and calculate its full range, there's one more rule about the address space itself: not all IP addresses are equal. Some ranges are **reserved** and cannot be used on the public internet. A private address cannot connect directly to the internet — a device needs a **public IP** to do that.
 
 | IP Address Range | Purpose | Class | Number of IPs |
 |:---|:---|:---:|---:|
@@ -458,7 +458,7 @@ That router performs a process called **NAT (Network Address Translation)**. It 
 
 ### 9. Routing Table
 
-A **routing table** is stored in a router and lists all known routes to network destinations. In Net Practice it has two fields:
+We know packets get forwarded between networks by routers — but how does a router decide where to send each packet? The answer is the **routing table**: a list of known routes stored in every router. In Net Practice it has two fields:
 
 ![Routing Table](./images/Routing_Table.png)
 
